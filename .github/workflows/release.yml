@@ -1,0 +1,97 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Release Multi-Platform Binaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          check-latest: true
+
+      - name: Determine Version
+        id: vars
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="v0.1.${{ github.run_number }}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Building version ${VERSION}"
+
+      - name: Build Multi-Platform Binaries & Packages
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist
+
+          # Format: GOOS/GOARCH/EXT/SUFFIX
+          TARGETS=(
+            "windows/amd64/.exe/windows_amd64"
+            "windows/arm64/.exe/windows_arm64"
+            "linux/amd64//linux_amd64"
+            "linux/arm64//linux_arm64"
+            "linux/arm//linux_armv7"
+            "darwin/amd64//darwin_amd64"
+            "darwin/arm64//darwin_arm64"
+          )
+
+          for TARGET in "${TARGETS[@]}"; do
+            IFS="/" read -r GOOS GOARCH EXT SUFFIX <<< "${TARGET}"
+            RAW_NAME="sendfile-${SUFFIX}${EXT}"
+            BIN_NAME="sendfile${EXT}"
+
+            echo "--> Compiling for ${GOOS}/${GOARCH} -> ${RAW_NAME}"
+
+            if [ "${GOARCH}" = "arm" ]; then
+              GOARM=7 GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags="-s -w" -o "dist/${RAW_NAME}" ./cmd/sendfile
+            else
+              GOOS=${GOOS} GOARCH=${GOARCH} go build -ldflags="-s -w" -o "dist/${RAW_NAME}" ./cmd/sendfile
+            fi
+
+            # Package into archive with standard binary name inside
+            cp "dist/${RAW_NAME}" "dist/${BIN_NAME}"
+            if [ "${GOOS}" = "windows" ]; then
+              (cd dist && zip -9 "sendfile_${VERSION}_${SUFFIX}.zip" "${BIN_NAME}")
+            else
+              (cd dist && tar -czvf "sendfile_${VERSION}_${SUFFIX}.tar.gz" "${BIN_NAME}")
+            fi
+            rm "dist/${BIN_NAME}"
+          done
+
+      - name: Generate Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.version }}
+          name: SendFile ${{ steps.vars.outputs.version }}
+          generate_release_notes: true
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
