@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SendFile - Local Wi-Fi File Transfer</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Navigation Bar -->
+    <header class="navbar">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="app-title">SendFile</span>
+          <span class="network-badge">
+            <span class="pulse-dot"></span>
+            <span id="nav-network-status">Wi-Fi Active</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="nav-device-info">
+        <div class="device-badge">
+          <span class="device-icon" id="my-device-icon">💻</span>
+          <div>
+            <div class="device-name" id="my-device-name">Detecting...</div>
+            <div class="device-ip" id="my-device-ip">127.0.0.1</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button id="btn-refresh" class="icon-btn" title="Refresh nearby peers">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+          </svg>
+        </button>
+        <button id="btn-qr" class="icon-btn" title="Mobile QR Connect">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </button>
+        <button id="btn-settings" class="icon-btn" title="Settings">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Mobile Segmented Navigation Tabs (Hidden on Desktop) -->
+    <div class="mobile-tabs" id="mobile-tabs">
+      <button class="mobile-tab-btn active" id="tab-btn-send" onclick="switchMobileTab('send')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        <span>Send Files</span>
+      </button>
+      <button class="mobile-tab-btn" id="tab-btn-activity" onclick="switchMobileTab('activity')">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        <span>Activity</span>
+        <span class="mobile-tab-badge" id="mobile-activity-badge">0</span>
+      </button>
+    </div>
+
+    <!-- Main Content Grid -->
+    <main class="main-layout">
+      <!-- Left Column: Nearby Devices & Sender Form -->
+      <section class="panel left-panel">
+        <div class="section-header">
+          <div>
+            <h2>Nearby Wi-Fi Devices</h2>
+            <p class="subtitle">Select a discovered device to transfer files</p>
+          </div>
+          <span class="counter-badge" id="peer-count">0 found</span>
+        </div>
+
+        <!-- Peer Radar / Cards Grid -->
+        <div class="peers-grid" id="peers-container">
+          <div class="empty-peers">
+            <div class="radar-scan"></div>
+            <p>Scanning local Wi-Fi for devices...</p>
+            <span class="hint">Ensure other devices are on the same Wi-Fi with SendFile running, or scan the QR code to connect from phone.</span>
+          </div>
+        </div>
+
+        <!-- File Selection & Staging Area -->
+        <div class="sender-section">
+          <div class="section-header">
+            <div>
+              <h3>Selected Files</h3>
+              <p class="subtitle" id="selected-target-hint">Select a device above to send files</p>
+            </div>
+          </div>
+
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="file-input" multiple hidden>
+            <div class="dropzone-content">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                </svg>
+              </div>
+              <p><strong>Click to browse</strong> or drag & drop files here</p>
+              <span class="subtext">Transfer any file format, movies, photos, or documents</span>
+            </div>
+          </div>
+
+          <!-- Staged Files List -->
+          <div class="staged-files" id="staged-files-list"></div>
+
+          <!-- Direct Send Action -->
+          <div class="send-action-row">
+            <button id="btn-send-files" class="primary-btn" disabled>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span>Send Files</span>
+            </button>
+            <button id="btn-clear-files" class="secondary-btn" style="display: none;">Clear</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Transfer Activity & History -->
+      <section class="panel right-panel">
+        <div class="section-header">
+          <div>
+            <h2>Transfer Activity</h2>
+            <p class="subtitle" id="save-location-subtitle">Saved to: Downloads/SendFile</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btn-open-folder" class="icon-btn small" title="Open Downloads Folder in File Explorer">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+              </svg>
+            </button>
+            <span class="counter-badge" id="active-transfer-count">Idle</span>
+          </div>
+        </div>
+
+        <div class="transfers-container" id="transfers-list">
+          <div class="empty-transfers">
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+            <p>No active transfers</p>
+            <span>Transferred files will be saved directly to your Downloads folder</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal: Incoming File Transfer Prompt -->
+    <div class="modal-overlay" id="modal-incoming">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge incoming">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Incoming Transfer Request</h3>
+            <p class="subtitle" id="incoming-sender-title">A device wants to send you files</p>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="incoming-info-box">
+            <div class="info-row">
+              <span class="label">Sender:</span>
+              <strong id="incoming-sender-name">Unknown Device</strong>
+            </div>
+            <div class="info-row">
+              <span class="label">Total Size:</span>
+              <strong id="incoming-total-size">0 MB</strong>
+            </div>
+            <div class="info-row">
+              <span class="label">Files count:</span>
+              <strong id="incoming-file-count">0 files</strong>
+            </div>
+          </div>
+          <div class="incoming-files-preview" id="incoming-files-preview"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-decline-transfer" class="danger-btn">Decline</button>
+          <button id="btn-accept-transfer" class="primary-btn">Accept & Download</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Settings -->
+    <div class="modal-overlay" id="modal-settings">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Settings</h3>
+            <p class="subtitle">Customize device and storage options</p>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="setting-name">Device Display Name</label>
+            <input type="text" id="setting-name" class="input-text" placeholder="e.g. My Laptop">
+          </div>
+          <div class="form-group">
+            <label for="setting-savedir">Save Directory</label>
+            <input type="text" id="setting-savedir" class="input-text" placeholder="Folder path">
+          </div>
+          <div class="form-group-toggle">
+            <div>
+              <strong>Auto-Accept Transfers</strong>
+              <p class="subtitle">Automatically accept incoming transfers without prompting</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-auto-accept">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-close-settings" class="secondary-btn">Cancel</button>
+          <button id="btn-save-settings" class="primary-btn">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: QR Code Connect for Phones -->
+    <div class="modal-overlay" id="modal-qr">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Connect from Phone</h3>
+            <p class="subtitle">Scan to transfer files directly in your mobile browser</p>
+          </div>
+        </div>
+        <div class="modal-body qr-body">
+          <div class="qr-container">
+            <img id="qr-code-img" src="" alt="Pairing QR Code">
+          </div>
+          <div class="qr-url-box">
+            <span id="qr-url-text">http://...</span>
+            <button id="btn-copy-url" class="icon-btn small">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            </button>
+          </div>
+          <p class="qr-hint">No app needed on iPhone or Android! Just point your phone camera at this code while on the same Wi-Fi network.</p>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-close-qr" class="secondary-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Download Offer (for Phone receiving files from PC) -->
+    <div class="modal-overlay" id="modal-download-offer">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-icon-badge">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Files Received!</h3>
+            <p class="subtitle" id="download-offer-subtitle">A device sent you files</p>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="incoming-info-box">
+            <div class="info-row">
+              <span class="label">Total Size:</span>
+              <strong id="download-offer-total-size">0 MB</strong>
+            </div>
+            <div class="info-row">
+              <span class="label">Files Count:</span>
+              <strong id="download-offer-file-count">0 files</strong>
+            </div>
+          </div>
+          <div class="incoming-files-preview" id="download-offer-files-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-close-download-offer" class="secondary-btn">Close</button>
+          <button id="btn-start-downloads" class="primary-btn">Save Files</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
